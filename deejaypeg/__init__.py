@@ -5,7 +5,7 @@ from . scale import LogScaler
 from . quantize import Quantizer
 from . image import Coder
 from . cli import audio2img
-
+from . eval import peaqb
 
 class Processor(object):
     """Pipeline Processor for invertible deejaypeg Modules

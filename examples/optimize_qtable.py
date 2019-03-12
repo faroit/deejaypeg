@@ -24,6 +24,7 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
     audio, rate = sf.read(args.input)
+    audio = audio[:44100]
     mono = True
     if mono:
         audio = np.atleast_2d(np.mean(audio, axis=1)).T
@@ -32,7 +33,6 @@ if __name__ == '__main__':
     tf = djpg.TF()
     ls = djpg.LogScaler()
     qt = djpg.Quantizer()
-    im = djpg.Coder(format='jpg', qtable=standard_l_qtable)
 
     """
     forward path
@@ -47,24 +47,18 @@ if __name__ == '__main__':
     Xq = qt.quantize(Xs)
     print("Xq", Xq.shape)
     # write as jpg image and save bounds values
-    im.encode(
-        Xq,
-        "quantized_image.jpg",
-        user_data={'bounds': ls.bounds.tolist()}
-    )
-    """
-    inverse path
-    """
 
-    Xm_hat, user_data = im.decode("quantized_image.jpg")
-    print(user_data['bounds'])
-    print("decode", Xm_hat.shape)
-    Xm_hat = qt.dequantize(Xm_hat)
-    print("dequantize", Xm_hat.shape)
-    Xm_hat = ls.unscale(Xm_hat, bounds=user_data['bounds'])
-    print("unscale", Xm_hat.shape)
 
-    # use reconstruction with original phase
-    X_hat = np.multiply(Xm_hat, np.exp(1j * np.angle(Xc)))
-    audio_hat = tf.inverse_transform(X_hat)
-    sf.write("reconstruction.wav", audio_hat, rate)
+    for i in range(100):
+        print(i)
+        q = standard_l_qtable
+        q[0] = i
+        im = djpg.Coder(format='jpg', qtable=q)
+        Y, file_size = im.encodedecode(Xq) 
+        Xm_hat = qt.dequantize(Y)
+        Xm_hat = ls.unscale(Xm_hat)
+
+        # use reconstruction with original phase
+        X_hat = np.multiply(Xm_hat, np.exp(1j * np.angle(Xc)))
+        audio_hat = tf.inverse_transform(X_hat)
+        print(djpg.peaqb(audio, audio_hat, rate))
