@@ -34,9 +34,7 @@ class BandwidthLimiter(object):
         self.nb_bins = X.shape[1]
         # find bins above `bandwidth`
         freqs = np.linspace(
-            0,
-            float(self.fs) / 2,
-            X.shape[1] + 1,
+            0, float(self.fs) / 2, X.shape[1] + 1,
             endpoint=True
         )
         ind = np.where(freqs <= self.max_bandwidth + 1)[0]

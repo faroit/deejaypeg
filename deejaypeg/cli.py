@@ -28,6 +28,11 @@ def audio2img(inargs=None):
     )
 
     parser.add_argument(
+        '--invert', action='store_true', default=False,
+        help='Use white background instead of black background',
+    )
+
+    parser.add_argument(
         '--nfft', type=int,
         default=2048, help='nfft size in samples, defaults to `2048`'
     )
@@ -66,6 +71,7 @@ def audio2img(inargs=None):
     im.encode(
         Xq,
         args.output,
+        inverted=args.invert,
         user_data={'bounds': ls.bounds.tolist()}
     )
 

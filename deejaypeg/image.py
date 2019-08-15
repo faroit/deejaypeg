@@ -1,5 +1,5 @@
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 import tempfile as tmp
 import piexif
 import piexif.helper
@@ -34,7 +34,7 @@ class Coder(object):
         image_file.close()
         return Y, file_size
 
-    def encode(self, X, out, user_data=None):
+    def encode(self, X, out, user_data={}, inverted=False):
         """
         Input is (nb_frames, nb_bins, nb_channels)
         Pillow takes (img_height, img_width, channels),
@@ -57,31 +57,28 @@ class Coder(object):
             buf = np.concatenate((buf, np.zeros(buf.shape[:-1] + (1,))), -1)
             img = Image.fromarray(buf.astype(np.int8), 'RGB')
 
-        if user_data is not None:
-            user_comment = piexif.helper.UserComment.dump(
-                json.dumps(user_data)
-            )
-            exif_ifd = {
-                piexif.ExifIFD.UserComment: user_comment,
-            }
-            exif_dict = {"Exif": exif_ifd}
-            exif_bytes = piexif.dump(exif_dict)
-            img.save(
-                out,
-                quality=self.quality,
-                optimize=True,
-                exif=exif_bytes,
-                qtables=self.qtables,
-                subsampling=0
-            )
-        else:
-            img.save(
-                out,
-                quality=self.quality,
-                optimize=True,
-                qtables=self.qtables,
-                subsampling=0
-            )
+        user_data['inverted'] = inverted
+
+        if inverted:
+            # use white background
+            img = ImageOps.invert(img)
+
+        user_comment = piexif.helper.UserComment.dump(
+            json.dumps(user_data)
+        )
+        exif_ifd = {
+            piexif.ExifIFD.UserComment: user_comment,
+        }
+        exif_dict = {"Exif": exif_ifd}
+        exif_bytes = piexif.dump(exif_dict)
+        img.save(
+            out,
+            quality=self.quality,
+            optimize=True,
+            exif=exif_bytes,
+            qtables=self.qtables,
+            subsampling=0
+        )
 
     def decode(self, path):
         return read(path)
@@ -104,6 +101,10 @@ def read(path):
         user_data = json.loads(user_json)
     except (TypeError, AttributeError) as e:
         user_data = None
+
+    if user_data['inverted']:
+        # use white background
+        img = ImageOps.invert(img)
 
     img = np.array(img).astype(np.uint8)
     # inverse flipped image
